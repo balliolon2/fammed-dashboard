@@ -187,6 +187,17 @@ export function Navbar() {
             )}
           </div>
         )}
+
+        {/* Operational Status indicator on Login */}
+        {isLoginPage && (
+          <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+            <span className="hidden sm:inline text-slate-600">พร้อมให้บริการคลินิก</span>
+            <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              TASP 2020 Engine
+            </span>
+          </div>
+        )}
       </div>
     </header>
   );
