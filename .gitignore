@@ -18,6 +18,7 @@
 *.pem
 
 # Local env files
+.env
 .env*.local
 
 # Vercel
@@ -34,3 +35,4 @@ next-env.d.ts
 # Agent scratch & agent folders
 .agents
 .scratch
+.neon

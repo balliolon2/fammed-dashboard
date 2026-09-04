@@ -11,19 +11,20 @@ import { evaluateCDSS, CDSSResult, RankedDrug } from "@/lib/cdss/engine";
 import { checkInteraction } from "@/lib/cdss/ddi";
 import { getClinicFormulary, getPatientCases, createPatientCase, saveConsultationRecord } from "@/app/actions";
 import {
-  AlertTriangle,
   CheckCircle2,
   Copy,
   BookOpen,
-  ChevronDown,
-  Info,
   Pill,
   User,
   Activity,
-  Sparkles,
   Printer,
   X,
   Plus,
+  ArrowRight,
+  AlertTriangle,
+  FileText,
+  ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function NewConsultationPage() {
@@ -57,8 +58,9 @@ export default function NewConsultationPage() {
   const [chosenDose, setChosenDose] = useState<string>("25-75 mg HS");
   const [clinicalRationale, setClinicalRationale] = useState<string>("");
 
-  // SOAP modal state
+  // SOAP drawer inspector state
   const [savedSoapNote, setSavedSoapNote] = useState<string | null>(null);
+  const [copiedSoap, setCopiedSoap] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -160,7 +162,11 @@ export default function NewConsultationPage() {
         chosenDrugId,
         chosenDose,
         isOverride: !isTopRecommended,
-        clinicalRationale: clinicalRationale || (isTopRecommended ? "จ่ายยาตามคำแนะนำอันดับแรกของระบบ" : "แพทย์ปรับเปลี่ยนตามวิจารณญาณทางคลินิก"),
+        clinicalRationale:
+          clinicalRationale ||
+          (isTopRecommended
+            ? "จ่ายยาตามคำแนะนำอันดับแรกของระบบ"
+            : "แพทย์ปรับเปลี่ยนตามวิจารณญาณทางคลินิก"),
       });
 
       if (res.success && res.soapNote) {
@@ -172,127 +178,132 @@ export default function NewConsultationPage() {
   // Copy to clipboard
   const handleCopySoap = (text: string) => {
     navigator.clipboard.writeText(text);
-    setToastMessage("คัดลอก SOAP Note ลงใน Clipboard แล้ว!");
-    setTimeout(() => setToastMessage(null), 3000);
+    setCopiedSoap(true);
+    setToastMessage("คัดลอก SOAP Note ลงใน Clipboard แล้ว");
+    setTimeout(() => {
+      setCopiedSoap(false);
+      setToastMessage(null), 3000;
+    }, 2500);
   };
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId);
 
   return (
-    <div className="space-y-6">
-      {/* Toast */}
+    <div className="space-y-6 pb-12">
+      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-sm animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-950 text-white px-4 py-2.5 rounded-lg shadow-xl border border-slate-800 flex items-center gap-2 text-xs font-medium">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">
-              การประเมินและเลือกใช้ยา Neuropathic Pain
-            </h1>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold border border-blue-100">
-              TASP 2020 Engine
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            วิเคราะห์จาก Mechanism สู่ Drug Choice • ตรวจสอบโรคร่วมและ DDI แบบเรียลไทม์
-          </p>
-        </div>
-
+      {/* Pinned Sticky Patient Context Bar (Q5) */}
+      <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80 -mx-4 md:-mx-6 px-4 md:px-6 py-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        {/* Patient Identity & Physiological Context */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowGuidelineDrawer(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition"
-          >
-            <BookOpen className="h-4 w-4" /> ดูตารางแนวทาง TASP 2020
-          </button>
-        </div>
-      </div>
-
-      {/* Case Selector Banner */}
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-950 text-white rounded-3xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center">
-            <User className="h-5 w-5 text-blue-300" />
+          <div className="h-8 w-8 rounded-lg bg-slate-950 text-white flex items-center justify-center text-xs font-mono font-bold">
+            {selectedCase ? selectedCase.caseCode.split("-").slice(-1)[0] : "Rx"}
           </div>
           <div>
-            <div className="text-xs text-blue-200">แฟ้มเคสที่กำลังตรวจ (De-identified Patient Case)</div>
-            <div className="text-sm font-bold mt-0.5">
-              {selectedCase ? (
-                <span>
-                  {selectedCase.caseCode} • เพศ {selectedCase.sex === "MALE" ? "ชาย" : "หญิง"} • อายุ {selectedCase.ageGroup} ปี
-                  {selectedCase.baselineEgfr && ` • eGFR ${selectedCase.baselineEgfr}`}
-                </span>
-              ) : (
-                <span className="text-blue-300 font-normal">ยังไม่ได้เลือกเคสผู้ป่วย</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-bold text-xs text-slate-950">
+                {selectedCase ? selectedCase.caseCode : "ยังไม่ได้เลือกเคส"}
+              </span>
+              {selectedCase && (
+                <>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    {selectedCase.sex === "MALE" ? "ชาย" : "หญิง"}, {selectedCase.ageGroup} ปี
+                  </span>
+                  {selectedCase.baselineEgfr !== null ? (
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
+                        selectedCase.baselineEgfr < 30
+                          ? "bg-rose-50 text-rose-700 border-rose-200 font-semibold"
+                          : selectedCase.baselineEgfr < 60
+                          ? "bg-amber-50 text-amber-800 border-amber-200"
+                          : "bg-slate-100 text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      eGFR: {selectedCase.baselineEgfr} mL/min
+                    </span>
+                  ) : null}
+                </>
               )}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5">
+              TASP 2020 Clinical Decision Support Workbench
             </div>
           </div>
         </div>
 
+        {/* Case Switcher & Action Controls */}
         <div className="flex items-center gap-2">
           <select
             value={selectedCaseId}
             onChange={(e) => setSelectedCaseId(e.target.value)}
-            className="bg-white/10 border border-white/20 text-white rounded-xl px-3 py-2 text-xs outline-none focus:bg-white/20"
+            className="bg-slate-50 border border-slate-200 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-slate-400 focus:bg-white transition"
           >
-            <option value="" className="text-slate-900">-- เลือกแฟ้มเคส --</option>
+            <option value="">-- สลับแฟ้มเคส --</option>
             {cases.map((c) => (
-              <option key={c.id} value={c.id} className="text-slate-900">
-                {c.caseCode} ({c.sex}, {c.ageGroup})
+              <option key={c.id} value={c.id}>
+                {c.caseCode} ({c.sex === "MALE" ? "ชาย" : "หญิง"}, {c.ageGroup} ปี)
               </option>
             ))}
           </select>
 
           <button
             onClick={() => setShowNewCaseModal(true)}
-            className="inline-flex items-center gap-1 bg-white text-blue-950 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-50 transition"
+            className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 px-2.5 py-1.5 rounded-lg text-xs font-medium shadow-xs transition"
           >
             <Plus className="h-3.5 w-3.5" /> เคสใหม่
+          </button>
+
+          <button
+            onClick={() => setShowGuidelineDrawer(true)}
+            className="inline-flex items-center gap-1.5 bg-slate-950 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-800 shadow-xs transition"
+          >
+            <BookOpen className="h-3.5 w-3.5" /> คู่มือ TASP
           </button>
         </div>
       </div>
 
-      {/* Section 1: Pain Assessment (NRS Slider + Phenotype + Etiology) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Assessment Inputs */}
+      {/* Main Unified Clinical Workbench Surface (Q1) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Clinical Examination Canvas */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Pain Score Slider */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          {/* Section 1: Pain Intensity Slider */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-rose-500" />
-                <span className="text-sm font-bold text-slate-800">
-                  ระดับความปวดปัจจุบัน (Pain Score: NRS 0–10)
-                </span>
+                <Activity className="h-4 w-4 text-rose-600" />
+                <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
+                  ระดับความปวดปัจจุบัน (Pain Score: NRS 0-10)
+                </h2>
               </div>
               <span
-                className={`text-sm font-extrabold px-3 py-1 rounded-full ${
+                className={`text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full ${
                   painScore >= 7
-                    ? "bg-rose-100 text-rose-700"
+                    ? "bg-rose-50 text-rose-700 border border-rose-200"
                     : painScore >= 4
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-emerald-100 text-emerald-700"
+                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                 }`}
               >
-                {painScore} / 10 • {painScore >= 7 ? "รุนแรง (Severe)" : painScore >= 4 ? "ปานกลาง (Moderate)" : "เล็กน้อย (Mild)"}
+                NRS {painScore} / 10 &bull; {painScore >= 7 ? "รุนแรง (Severe)" : painScore >= 4 ? "ปานกลาง (Moderate)" : "เล็กน้อย (Mild)"}
               </span>
             </div>
+
             <input
               type="range"
               min="0"
               max="10"
               value={painScore}
               onChange={(e) => setPainScore(parseInt(e.target.value))}
-              className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600"
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-950"
             />
-            <div className="flex justify-between text-[10px] text-slate-400 mt-2 font-medium">
-              <span>0 (ไม่ปวดเลย)</span>
+            <div className="flex justify-between text-xs text-slate-400 mt-2 font-medium font-mono">
+              <span>0 (ไม่ปวด)</span>
               <span>2</span>
               <span>4</span>
               <span>6</span>
@@ -301,14 +312,17 @@ export default function NewConsultationPage() {
             </div>
           </div>
 
-          {/* Etiology Selector */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          {/* Section 2: Underlying Etiology (Guideline First-line Driver) */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold text-slate-800">
-                1. ภาวะที่เป็นสาเหตุ (Underlying Etiology)
-              </span>
-              <span className="text-[11px] text-slate-400">กำหนด First-line ตาม TASP</span>
+              <div>
+                <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
+                  1. ภาวะที่เป็นสาเหตุ (Underlying Etiology)
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">กำหนด First-line ตามแนวทางเวชปฏิบัติ TASP 2020</p>
+              </div>
             </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {ETIOLOGIES.map((item) => {
                 const isSelected = etiologyId === item.id;
@@ -316,14 +330,14 @@ export default function NewConsultationPage() {
                   <button
                     key={item.id}
                     onClick={() => setEtiologyId(item.id)}
-                    className={`text-left p-3 rounded-2xl border text-xs transition-all ${
+                    className={`text-left p-3 rounded-lg border text-xs transition-all ${
                       isSelected
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20 font-bold"
-                        : "bg-slate-50/50 hover:bg-slate-100/80 border-slate-200 text-slate-700 font-medium"
+                        ? "bg-slate-950 text-white border-slate-950 shadow-xs font-semibold"
+                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-800 font-normal"
                     }`}
                   >
-                    <div>{item.th}</div>
-                    <div className={`text-[10px] mt-0.5 ${isSelected ? "text-blue-100" : "text-slate-400"}`}>
+                    <div className="font-semibold">{item.th}</div>
+                    <div className={`text-[11px] mt-0.5 ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
                       {item.note}
                     </div>
                   </button>
@@ -332,14 +346,17 @@ export default function NewConsultationPage() {
             </div>
           </div>
 
-          {/* Pain Phenotype Selector */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          {/* Section 3: Dominant Sensory Phenotype */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold text-slate-800">
-                2. ลักษณะอาการปวดเด่น (Pain Phenotype)
-              </span>
-              <span className="text-[11px] text-slate-400">สะท้อนกลไกพยาธิสรีรวิทยา</span>
+              <div>
+                <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
+                  2. ลักษณะอาการปวดเด่น (Pain Phenotype)
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">สะท้อนกลไกพยาธิสรีรวิทยา (Mechanism-based targeting)</p>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
               {PHENOTYPES.map((p) => {
                 const isSelected = phenotypeId === p.id;
@@ -347,18 +364,20 @@ export default function NewConsultationPage() {
                   <button
                     key={p.id}
                     onClick={() => setPhenotypeId(p.id)}
-                    className={`text-left p-3 rounded-2xl border text-xs transition-all flex items-start gap-2.5 ${
+                    className={`text-left p-3 rounded-lg border text-xs transition-all ${
                       isSelected
-                        ? "bg-slate-900 text-white border-slate-900 shadow-md font-bold"
-                        : "bg-slate-50/50 hover:bg-slate-100/80 border-slate-200 text-slate-700"
+                        ? "bg-slate-950 text-white border-slate-950 shadow-xs font-semibold"
+                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-800"
                     }`}
                   >
-                    <span className="text-lg shrink-0">{p.emoji}</span>
-                    <div>
-                      <div>{p.th}</div>
-                      <div className={`text-[10px] ${isSelected ? "text-slate-300" : "text-slate-400"}`}>
-                        {p.desc}
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold text-xs">{p.th}</div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        {p.en.split("/")[0].trim()}
+                      </span>
+                    </div>
+                    <div className={`text-xs mt-1 leading-relaxed ${isSelected ? "text-slate-300" : "text-slate-500"}`}>
+                      {p.desc}
                     </div>
                   </button>
                 );
@@ -366,46 +385,68 @@ export default function NewConsultationPage() {
             </div>
           </div>
 
-          {/* Comorbidities Checklist Matrix */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          {/* Section 4: Comorbidities & Safety Matrix */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <span className="text-sm font-bold text-slate-800">
-                  3. โรคร่วมและภาวะที่ต้องระวัง (Comorbidities & Precautions)
-                </span>
-                <p className="text-[11px] text-slate-400">คลิกเลือกหลายโรคได้ ระบบจะหัก/เพิ่มคะแนนทันที</p>
+                <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
+                  3. โรคร่วมและข้อควรระวัง (Comorbidities & Precautions)
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">คลิกเลือกหลายโรคได้ ระบบคำนวณข้อห้ามใช้และอันดับยาทันที</p>
               </div>
               {selectedComorbidities.length > 0 && (
                 <button
                   onClick={() => setSelectedComorbidities([])}
-                  className="text-[11px] text-rose-600 hover:underline font-semibold"
+                  className="text-xs text-rose-600 hover:underline font-medium"
                 >
                   ล้าง ({selectedComorbidities.length})
                 </button>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
               {COMORBIDITIES.map((c) => {
                 const isSelected = selectedComorbidities.includes(c.id);
                 return (
                   <button
                     key={c.id}
                     onClick={() => toggleComorbidity(c.id)}
-                    className={`text-left p-2.5 rounded-2xl border text-xs flex items-start gap-2 transition-all ${
+                    className={`text-left p-3 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${
                       isSelected
                         ? c.group === "positive"
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                          ? "bg-emerald-50/90 border-emerald-300 text-emerald-900 font-medium"
                           : c.group === "avoid"
-                          ? "bg-rose-600 text-white border-rose-600 shadow-sm"
-                          : "bg-amber-500 text-white border-amber-500 shadow-sm"
-                        : "bg-slate-50/50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                          ? "bg-rose-50/90 border-rose-300 text-rose-900 font-medium"
+                          : "bg-amber-50/90 border-amber-300 text-amber-900 font-medium"
+                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
                     }`}
                   >
-                    <span className="text-base shrink-0">{c.emoji}</span>
+                    <span
+                      className={`h-2 w-2 rounded-full mt-1 shrink-0 ${
+                        isSelected
+                          ? c.group === "positive"
+                            ? "bg-emerald-600"
+                            : c.group === "avoid"
+                            ? "bg-rose-600"
+                            : "bg-amber-600"
+                          : c.group === "positive"
+                          ? "bg-emerald-400"
+                          : c.group === "avoid"
+                          ? "bg-rose-400"
+                          : "bg-amber-400"
+                      }`}
+                    />
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[11px] truncate">{c.th}</div>
-                      <div className={`text-[9px] mt-0.5 ${isSelected ? "text-white/80" : "text-slate-400"}`}>
+                      <div className="font-semibold text-xs truncate">{c.th}</div>
+                      <div className={`text-[11px] mt-0.5 truncate ${
+                        isSelected
+                          ? c.group === "positive"
+                            ? "text-emerald-700"
+                            : c.group === "avoid"
+                            ? "text-rose-700"
+                            : "text-amber-700"
+                          : "text-slate-500"
+                      }`}>
                         {c.hint}
                       </div>
                     </div>
@@ -414,141 +455,246 @@ export default function NewConsultationPage() {
               })}
             </div>
           </div>
+
+          {/* Section 5: Integrated DDI Quick Checker */}
+          <div className="bg-slate-50 rounded-xl border border-slate-200/80 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="h-4 w-4 text-slate-700" />
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Drug-Drug Interaction Checker (DDI)
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="text-xs font-medium text-slate-600">ยาตัวที่ 1 (Drug A)</label>
+                <select
+                  value={drugA}
+                  onChange={(e) => setDrugA(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-slate-400"
+                >
+                  {DRUGS.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.mech})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600">ยาตัวที่ 2 (Drug B)</label>
+                <select
+                  value={drugB}
+                  onChange={(e) => setDrugB(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-slate-400"
+                >
+                  {DRUGS.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.mech})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {interaction ? (
+              <div
+                className={`rounded-lg border p-3 text-xs ${
+                  interaction.severity === "high"
+                    ? "bg-rose-50 border-rose-200 text-rose-950"
+                    : interaction.severity === "moderate"
+                    ? "bg-amber-50 border-amber-200 text-amber-950"
+                    : "bg-white border-slate-200 text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.2 rounded-full uppercase ${
+                      interaction.severity === "high"
+                        ? "bg-rose-700 text-white"
+                        : interaction.severity === "moderate"
+                        ? "bg-amber-600 text-white"
+                        : "bg-blue-600 text-white"
+                    }`}
+                  >
+                    ความรุนแรง: {interaction.severity}
+                  </span>
+                  <span className="font-semibold">{interaction.type}</span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed">{interaction.desc}</p>
+                <div className="mt-2 pt-2 border-t border-black/10 text-xs">
+                  <span className="font-bold">คำแนะนำการจัดการ:</span> {interaction.management}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200/80 bg-white p-2.5 text-xs text-slate-500 text-center">
+                เลือกยาตัวเดียวกัน หรือไม่มีข้อมูลปฏิกิริยาระหว่างยาที่มีนัยสำคัญ
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right Column: Ranked Drug Cards & Prescribing */}
+        {/* Right Column: CDSS Decision Engine & Pharmacological Matrix (Q3) */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Top Recommendation Summary */}
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-5 text-white shadow-md">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-cyan-300" />
-              <span className="text-xs font-bold tracking-wider uppercase text-cyan-200">
-                ยาที่แนะนำอันดับ 1–2 (TASP 2020 Guidance)
+          {/* Top 2 Recommendation Deck (Split Comparison) */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950">
+                  ยาที่แนะนำอันดับ 1-2 (TASP 2020 Top Choices)
+                </h2>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
+                Guideline First-line
               </span>
             </div>
 
-            <div className="space-y-2 mt-3">
-              {cdssResult.topRecommendations.map((d, index) => (
-                <div
-                  key={d.id}
-                  className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="h-6 w-6 rounded-full bg-cyan-400 text-blue-950 font-black text-xs flex items-center justify-center">
-                      #{index + 1}
-                    </span>
-                    <div>
-                      <div className="font-bold text-sm text-white">{d.name}</div>
-                      <div className="text-[10px] text-cyan-100">
-                        ขนาดแนะนำ: {d.startingDose}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-white/20 font-extrabold">
-                    {d.tierScoreLabel}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-[10px] text-cyan-100/80 mt-3">
-              * คำนวณจาก Phenotype match + Etiology guidance + โรคร่วม โดยคัดกรองยาที่มีในคลังของคลินิก
-            </div>
-          </div>
-
-          {/* Full Ranked Drug List */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-800">การจัดอันดับยาทั้ง 8 ชนิด</span>
-              <span className="text-xs text-slate-400">เรียงตามคะแนนสุทธิ</span>
-            </div>
-
-            <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
-              {cdssResult.rankedDrugs.map((drug) => {
-                const isTop = cdssResult.topRecommendations.some((t) => t.id === drug.id);
-                const hasContra = drug.comorbiditySummary.level === "contra";
-                const hasCaution = drug.comorbiditySummary.level === "caution";
-                const hasBenefit = drug.comorbiditySummary.level === "benefit";
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              {cdssResult.topRecommendations.slice(0, 2).map((d, index) => {
+                const isSelected = chosenDrugId === d.id;
                 return (
                   <div
-                    key={drug.id}
-                    className={`p-3.5 rounded-2xl border transition-all ${
-                      hasContra
-                        ? "bg-rose-50/50 border-rose-200"
-                        : isTop
-                        ? "bg-blue-50/40 border-blue-300 ring-1 ring-blue-200"
-                        : "bg-white border-slate-200"
+                    key={d.id}
+                    onClick={() => {
+                      setChosenDrugId(d.id);
+                      setChosenDose(d.startingDose);
+                    }}
+                    className={`rounded-xl border p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-slate-950 bg-slate-50/80 shadow-xs ring-1 ring-slate-950"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs text-slate-900">{drug.name}</span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${drug.tierScoreClass}`}>
-                            {drug.tierScoreLabel}
-                          </span>
-                          {!drug.isInStock && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                              ไม่มีในคลัง
-                            </span>
-                          )}
-                          {drug.isFirstLine && (
-                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
-                              First-line
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{drug.mechTh}</p>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <span className="h-5 w-5 rounded-md bg-slate-900 text-white font-mono font-bold text-[11px] flex items-center justify-center">
+                        #{index + 1}
+                      </span>
+                      <span className="text-[10px] font-mono font-semibold text-slate-600">
+                        {d.totalScore.toFixed(1)} pt
+                      </span>
+                    </div>
 
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-bold text-slate-700">
-                          {drug.totalScore.toFixed(1)} คะแนน
-                        </span>
+                    <div className="mt-2">
+                      <div className="font-bold text-sm text-slate-950">{d.name}</div>
+                      <div className="text-[11px] text-slate-500 font-mono mt-0.5">{d.startingDose}</div>
+                      <div className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed">
+                        {d.mechTh}
                       </div>
                     </div>
 
-                    {/* Comorbidity Warning Alerts */}
-                    {drug.comorbiditySummary.items.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[10px]">
-                        {drug.comorbiditySummary.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className={`flex items-start gap-1 ${
-                              item.level === "contra"
-                                ? "text-rose-700 font-medium"
-                                : item.level === "caution"
-                                ? "text-amber-700"
-                                : "text-emerald-700"
-                            }`}
-                          >
-                            <span className="shrink-0 mt-0.5">
-                              {item.level === "contra" ? "⛔" : item.level === "caution" ? "⚠️" : "🌟"}
-                            </span>
-                            <span>{item.reason}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                        {d.tierScoreLabel}
+                      </span>
+                      <span className={`text-[10px] font-medium ${isSelected ? "text-slate-900 font-bold" : "text-slate-400"}`}>
+                        {isSelected ? "กำลังเลือก" : "คลิกเพื่อเลือก"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Prescription Decision & Save Box */}
-          <div className="bg-white rounded-3xl border-2 border-blue-500/30 p-5 shadow-sm space-y-4">
+          {/* Pharmacological Matrix: All 8 Drugs */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
+                ตารางเปรียบเทียบยาทั้ง 8 ชนิด (Pharmacological Matrix)
+              </h2>
+              <span className="text-[10px] font-mono text-slate-500">เรียงตามคะแนนสุทธิ</span>
+            </div>
+
+            <div className="border border-slate-200/80 rounded-lg overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px]">
+                  <tr>
+                    <th className="p-2.5 font-medium">ชื่อยา</th>
+                    <th className="p-2.5 font-medium">ขนาดเริ่ม</th>
+                    <th className="p-2.5 font-medium">คะแนน</th>
+                    <th className="p-2.5 font-medium text-right">เลือก</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {cdssResult.rankedDrugs.map((drug, idx) => {
+                    const isSelected = chosenDrugId === drug.id;
+                    const hasContra = drug.comorbiditySummary.level === "contra";
+
+                    return (
+                      <tr
+                        key={drug.id}
+                        className={`transition-colors ${
+                          isSelected ? "bg-slate-100/80 font-medium" : "hover:bg-slate-50/70"
+                        }`}
+                      >
+                        <td className="p-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] text-slate-400">#{idx + 1}</span>
+                            <span className="font-bold text-slate-900">{drug.name}</span>
+                            {!drug.isInStock && (
+                              <span className="text-[9px] px-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                หมด
+                              </span>
+                            )}
+                          </div>
+                          {drug.comorbiditySummary.items.length > 0 && (
+                            <div className="text-[10px] mt-0.5 space-y-0.5">
+                              {drug.comorbiditySummary.items.map((item, i) => (
+                                <div
+                                  key={i}
+                                  className={
+                                    item.level === "contra"
+                                      ? "text-rose-700 font-semibold"
+                                      : item.level === "caution"
+                                      ? "text-amber-700"
+                                      : "text-emerald-700"
+                                  }
+                                >
+                                  {item.level === "contra" ? "[ห้ามใช้]" : item.level === "caution" ? "[ระวัง]" : "[เด่น]"}{" "}
+                                  {item.reason}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2.5 font-mono text-slate-600 text-[11px]">{drug.startingDose}</td>
+                        <td className="p-2.5 font-mono text-slate-900 font-semibold">{drug.totalScore.toFixed(1)}</td>
+                        <td className="p-2.5 text-right">
+                          <button
+                            onClick={() => {
+                              setChosenDrugId(drug.id);
+                              setChosenDose(drug.startingDose);
+                            }}
+                            className={`px-2 py-1 rounded text-[10px] font-semibold transition ${
+                              isSelected
+                                ? "bg-slate-900 text-white"
+                                : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {isSelected ? "เลือกแล้ว" : "เลือก"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Prescription & Titration Decision Console */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
-              <Pill className="h-5 w-5 text-blue-600" />
-              <h3 className="text-sm font-bold text-slate-900">
+              <Pill className="h-4 w-4 text-slate-900" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950">
                 การตัดสินใจสั่งจ่ายยาของแพทย์ (Physician Decision)
-              </h3>
+              </h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600">เลือกยาที่จะสั่งใช้</label>
+                <label className="text-xs font-medium text-slate-600">ยาที่ตัดสินใจสั่งใช้</label>
                 <select
                   value={chosenDrugId}
                   onChange={(e) => {
@@ -556,7 +702,7 @@ export default function NewConsultationPage() {
                     const found = DRUGS.find((d) => d.id === e.target.value);
                     if (found) setChosenDose(found.startingDose);
                   }}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold outline-none focus:border-blue-500"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-slate-400"
                 >
                   {DRUGS.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -567,19 +713,18 @@ export default function NewConsultationPage() {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600">ขนาดและวิธีใช้เริ่มต้น</label>
+                <label className="text-xs font-medium text-slate-600">ขนาดและวิธีใช้เริ่มต้น (Dose)</label>
                 <input
                   type="text"
                   value={chosenDose}
                   onChange={(e) => setChosenDose(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-blue-500"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-mono outline-none focus:border-slate-400"
                 />
               </div>
             </div>
 
-            {/* Clinical Rationale */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-600">
+              <label className="text-xs font-medium text-slate-600">
                 เหตุผลทางคลินิก (Clinical Rationale)
               </label>
               <textarea
@@ -587,7 +732,7 @@ export default function NewConsultationPage() {
                 value={clinicalRationale}
                 onChange={(e) => setClinicalRationale(e.target.value)}
                 placeholder="ระบุเหตุผลทางคลินิก หรือคลิกเลือกข้อความแนะนำด้านล่าง..."
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs outline-none focus:border-blue-500"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2.5 text-xs outline-none focus:border-slate-400"
               />
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {rationaleChips.map((chip, idx) => (
@@ -595,7 +740,7 @@ export default function NewConsultationPage() {
                     key={idx}
                     type="button"
                     onClick={() => setClinicalRationale(chip)}
-                    className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                    className="text-xs px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
                   >
                     + {chip}
                   </button>
@@ -603,150 +748,82 @@ export default function NewConsultationPage() {
               </div>
             </div>
 
-            {/* Save Button */}
             <button
               onClick={handleSaveConsultation}
               disabled={isPending}
-              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-lg bg-slate-950 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition-all active:scale-[0.99] flex items-center justify-center gap-2"
             >
-              {isPending ? "กำลังบันทึกข้อมูล..." : "บันทึกผลการประเมิน & สร้าง SOAP Note"}
+              {isPending ? "กำลังบันทึกข้อมูล..." : "บันทึกผลการประเมินและสร้าง SOAP Note"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Section 2: DDI Interaction Checker Widget */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="h-8 w-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-              ⚡
-            </span>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Drug-Drug Interaction Checker (ตรวจสอบปฏิกิริยาระหว่างยา)
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                วิเคราะห์ Pharmacodynamic & Pharmacokinetic Interactions ตามมาตรฐาน TASP 2020
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="text-[11px] font-semibold text-slate-600">ยาตัวที่ 1 (Drug A)</label>
-            <select
-              value={drugA}
-              onChange={(e) => setDrugA(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-blue-500"
-            >
-              {DRUGS.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} — {d.mech}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-600">ยาตัวที่ 2 (Drug B)</label>
-            <select
-              value={drugB}
-              onChange={(e) => setDrugB(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-blue-500"
-            >
-              {DRUGS.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} — {d.mech}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {interaction ? (
-          <div
-            className={`rounded-2xl border p-4 text-xs ${
-              interaction.severity === "high"
-                ? "bg-rose-50 border-rose-200 text-rose-900"
-                : interaction.severity === "moderate"
-                ? "bg-amber-50 border-amber-200 text-amber-900"
-                : "bg-blue-50 border-blue-200 text-blue-900"
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                  interaction.severity === "high"
-                    ? "bg-rose-600 text-white"
-                    : interaction.severity === "moderate"
-                    ? "bg-amber-600 text-white"
-                    : "bg-blue-600 text-white"
-                }`}
-              >
-                {interaction.severity} risk
-              </span>
-              <span className="font-bold text-sm">{interaction.title}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/80 border">
-                {interaction.type}
-              </span>
-            </div>
-            <p className="mt-1 leading-relaxed">{interaction.desc}</p>
-            <div className="mt-2.5 pt-2 border-t border-black/10 font-medium">
-              💡 <span className="font-bold">คำแนะนำการจัดการ:</span> {interaction.management}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500 text-center">
-            เลือกยาตัวเดียวกัน หรือไม่มีข้อมูลปฏิกิริยาระหว่างยาที่มีนัยสำคัญ
-          </div>
-        )}
-      </div>
-
-      {/* SOAP Note Success Modal */}
+      {/* Slide-Over Clinical Inspector Drawer for SOAP Note (Q8) */}
       {savedSoapNote && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  บันทึกการประเมินและสร้าง SOAP Note สำเร็จ
-                </h3>
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div
+            className="absolute inset-0 bg-slate-950/30 backdrop-blur-xs transition-opacity"
+            onClick={() => setSavedSoapNote(null)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-xl w-full flex pl-10">
+            <div className="w-full bg-white shadow-2xl border-l border-slate-200/80 flex flex-col justify-between p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-950">
+                        บันทึกการประเมินและสร้าง SOAP Note สำเร็จ
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                        {selectedCase?.caseCode} &bull; Longitudinal Consultation Recorded
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSavedSoapNote(null)}
+                    className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="text-xs text-slate-600 leading-relaxed">
+                  ข้อความถูกจัดรูปแบบตามมาตรฐานเวชระเบียน SOAP พร้อมนำไปวางในโปรแกรม HIS ของโรงพยาบาลได้ทันที (1-Click Copy)
+                </div>
+
+                <div className="bg-slate-50 rounded-xl border border-slate-200/80 p-4 max-h-[60vh] overflow-y-auto">
+                  <pre className="text-xs font-mono text-slate-900 whitespace-pre-wrap leading-relaxed">
+                    {savedSoapNote}
+                  </pre>
+                </div>
               </div>
-              <button
-                onClick={() => setSavedSoapNote(null)}
-                className="h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
 
-            <p className="text-xs text-slate-500">
-              ข้อความถูกจัดรูปแบบตามมาตรฐานเวชระเบียน สามารถกดปุ่มด้านล่างเพื่อคัดลอกและนำไปวางในโปรแกรม HIS (HOSxP, JHCIS) ได้ทันที
-            </p>
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium border border-slate-200 hover:bg-slate-50 text-slate-700 transition"
+                >
+                  <Printer className="h-3.5 w-3.5" /> พิมพ์เอกสาร
+                </button>
 
-            <div className="flex-1 overflow-y-auto bg-slate-50 rounded-2xl p-4 border border-slate-200">
-              <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed text-slate-800">
-                {savedSoapNote}
-              </pre>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 pt-2">
-              <button
-                onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
-              >
-                <Printer className="h-4 w-4" /> พิมพ์เอกสาร A4
-              </button>
-
-              <button
-                onClick={() => handleCopySoap(savedSoapNote)}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition"
-              >
-                <Copy className="h-4 w-4" /> 1-Click คัดลอก SOAP Note
-              </button>
+                <button
+                  onClick={() => handleCopySoap(savedSoapNote)}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-[0.99] ${
+                    copiedSoap
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-950 hover:bg-slate-800 text-white"
+                  }`}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {copiedSoap ? "คัดลอกลง Clipboard แล้ว" : "คัดลอก SOAP Note"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -754,38 +831,38 @@ export default function NewConsultationPage() {
 
       {/* New Case Creation Modal */}
       {showNewCaseModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200/80 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-base font-bold text-slate-900">สร้างแฟ้มเคสผู้ป่วยใหม่ (De-identified)</h3>
+              <h3 className="text-sm font-bold text-slate-950">สร้างแฟ้มเคสผู้ป่วยใหม่ (De-identified)</h3>
               <button
                 onClick={() => setShowNewCaseModal(false)}
-                className="h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500"
+                className="h-7 w-7 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
               <div>
-                <label className="font-semibold text-slate-600">กลุ่มอายุ (Age Group)</label>
+                <label className="font-semibold text-slate-700">กลุ่มอายุ (Age Group)</label>
                 <select
                   value={newCaseAge}
                   onChange={(e) => setNewCaseAge(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 outline-none"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2.5 outline-none focus:border-slate-400"
                 >
                   <option value="<45">น้อยกว่า 45 ปี (&lt;45)</option>
-                  <option value="45-65">45 – 65 ปี</option>
+                  <option value="45-65">45-65 ปี</option>
                   <option value=">65">มากกว่า 65 ปี (&gt;65 / ผู้สูงอายุ)</option>
                 </select>
               </div>
 
               <div>
-                <label className="font-semibold text-slate-600">เพศ (Sex)</label>
+                <label className="font-semibold text-slate-700">เพศ (Sex)</label>
                 <select
                   value={newCaseSex}
                   onChange={(e) => setNewCaseSex(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 outline-none"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2.5 outline-none focus:border-slate-400"
                 >
                   <option value="FEMALE">หญิง (Female)</option>
                   <option value="MALE">ชาย (Male)</option>
@@ -793,22 +870,22 @@ export default function NewConsultationPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-600">Baseline eGFR (mL/min/1.73m2)</label>
+                <label className="font-semibold text-slate-700">Baseline eGFR (mL/min/1.73m2)</label>
                 <input
                   type="number"
                   value={newCaseEgfr}
                   onChange={(e) => setNewCaseEgfr(e.target.value)}
-                  placeholder="เช่น 60.0"
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 outline-none"
+                  placeholder="เช่น 75.0"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2.5 font-mono outline-none focus:border-slate-400"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-600">การทำงานของตับ (LFT)</label>
+                <label className="font-semibold text-slate-700">การทำงานของตับ (LFT)</label>
                 <select
                   value={newCaseLft}
                   onChange={(e) => setNewCaseLft(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 outline-none"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2.5 outline-none focus:border-slate-400"
                 >
                   <option value="NORMAL">ปกติ (Normal)</option>
                   <option value="MILD_ELEVATED">เอนไซม์ตับขึ้นเล็กน้อย (Mild elevated)</option>
@@ -819,7 +896,7 @@ export default function NewConsultationPage() {
 
             <button
               onClick={handleCreateCase}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition"
+              className="w-full py-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-white font-semibold text-xs transition"
             >
               ยืนยันการสร้างแฟ้มเคส
             </button>
@@ -829,33 +906,33 @@ export default function NewConsultationPage() {
 
       {/* Guideline Tables Drawer */}
       {showGuidelineDrawer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex justify-end">
           <div className="bg-white max-w-2xl w-full h-full p-6 shadow-2xl overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-950">
                   ตารางอ้างอิง TASP 2020 Guidelines
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Clinical Guidance for Neuropathic Pain & Fibromyalgia 2020
                 </p>
               </div>
               <button
                 onClick={() => setShowGuidelineDrawer(false)}
-                className="h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500"
+                className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Table 3.1.4 */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 mb-2">
-                Table 3.1.4 — First-line / Second-line ตามโรค
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-900">
+                Table 3.1.4: First-line และ Second-line ตามโรค
               </h4>
-              <div className="border border-slate-200 rounded-2xl overflow-hidden text-xs">
+              <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
                 <table className="w-full border-collapse">
-                  <thead className="bg-slate-900 text-white text-[11px]">
+                  <thead className="bg-slate-950 text-white text-[11px]">
                     <tr>
                       <th className="p-2.5 text-left">โรค</th>
                       <th className="p-2.5 text-left">First-line</th>
@@ -894,13 +971,13 @@ export default function NewConsultationPage() {
             </div>
 
             {/* Table 3.1.5 */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 mb-2">
-                Table 3.1.5 — ขนาดยาแนะนำและการปรับ (Start Low, Go Slow)
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-900">
+                Table 3.1.5: ขนาดยาแนะนำและการปรับ (Start Low, Go Slow)
               </h4>
-              <div className="border border-slate-200 rounded-2xl overflow-hidden text-xs">
+              <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
                 <table className="w-full border-collapse">
-                  <thead className="bg-blue-600 text-white text-[11px]">
+                  <thead className="bg-slate-900 text-white text-[11px]">
                     <tr>
                       <th className="p-2.5 text-left">ยา</th>
                       <th className="p-2.5 text-left">ขนาดเริ่ม</th>
@@ -912,9 +989,9 @@ export default function NewConsultationPage() {
                     {DRUGS.map((d) => (
                       <tr key={d.id} className="hover:bg-slate-50">
                         <td className="p-2.5 font-bold">{d.name}</td>
-                        <td className="p-2.5">{d.startingDose}</td>
-                        <td className="p-2.5">{d.dose}</td>
-                        <td className="p-2.5 text-slate-500">{d.neg.join(", ")}</td>
+                        <td className="p-2.5 font-mono">{d.startingDose}</td>
+                        <td className="p-2.5 font-mono">{d.dose}</td>
+                        <td className="p-2.5 text-slate-600">{d.neg.join(", ")}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -17,13 +17,24 @@ async function main() {
     },
   });
 
-  // 2. Create or upsert Default Clinician User
+  // 2. Create or upsert Default Clinician Users
   const clinician = await prisma.user.upsert({
     where: { email: "somchai.med@fammed.local" },
     update: {},
     create: {
-      name: "นพ. สมชาย รักษาดี (Family Physician)",
+      name: "นพ. สมชาย รักษาดี (Staff Physician)",
       email: "somchai.med@fammed.local",
+      role: "CLINICIAN",
+      clinicId: clinic.id,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "rattana.med@fammed.local" },
+    update: {},
+    create: {
+      name: "พญ. รัตนา ใจดี (Resident Physician)",
+      email: "rattana.med@fammed.local",
       role: "CLINICIAN",
       clinicId: clinic.id,
     },

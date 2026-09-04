@@ -9,7 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        thai: ["'IBM Plex Sans Thai'", "Sarabun", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-geist-sans)",
+          "var(--font-thai)",
+          "'IBM Plex Sans Thai'",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "sans-serif",
+        ],
+        mono: [
+          "var(--font-geist-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
+        thai: [
+          "var(--font-thai)",
+          "'IBM Plex Sans Thai'",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "sans-serif",
+        ],
       },
     },
   },

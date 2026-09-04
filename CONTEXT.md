@@ -66,3 +66,10 @@ _Avoid_: History log, progress track
 A structured clinical summary formatted into Subjective, Objective, Assessment, and Plan sections ready for direct transfer into hospital information systems.
 _Avoid_: Summary text, report, discharge note
 
+### Authentication & Session Management
+
+**Clinician Session**:
+An active authenticated state identifying the attending clinician responsible for consultations conducted on the current workstation.
+_Avoid_: Login token, auth cookie, user state
+
+

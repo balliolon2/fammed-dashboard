@@ -4,6 +4,35 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { generateSoapNote, SoapInput } from "@/lib/cdss/soap-generator";
 import { evaluateCDSS } from "@/lib/cdss/engine";
+import { getClinicianSession } from "@/lib/session";
+
+export async function getCurrentClinician() {
+  return await getClinicianSession();
+}
+
+export async function getAllClinicians() {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        clinic: {
+          select: {
+            name: true,
+            code: true,
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+    return users;
+  } catch (error) {
+    console.error("Failed to get clinicians:", error);
+    return [];
+  }
+}
 
 export async function getClinicFormulary() {
   try {
@@ -59,8 +88,7 @@ export async function getPatientCases() {
     const cases = await prisma.patientCase.findMany({
       include: {
         consultations: {
-          orderBy: { visitDate: "desc" },
-          take: 1,
+          orderBy: { visitDate: "asc" },
         },
         _count: {
           select: { consultations: true },
@@ -84,9 +112,12 @@ export async function createPatientCase(data: {
 }) {
   try {
     const clinic = await prisma.clinic.findFirst();
-    const user = await prisma.user.findFirst();
+    let clinician = await getClinicianSession();
+    if (!clinician) {
+      clinician = await prisma.user.findFirst();
+    }
 
-    if (!clinic || !user) throw new Error("Clinic or user missing");
+    if (!clinic || !clinician) throw new Error("Clinic or user missing");
 
     // Generate unique sequential case code
     const count = await prisma.patientCase.count();
@@ -102,7 +133,7 @@ export async function createPatientCase(data: {
         baselineLft: data.baselineLft || "NORMAL",
         baselineComorbidities: JSON.stringify(data.baselineComorbidities),
         clinicId: clinic.id,
-        createdByUserId: user.id,
+        createdByUserId: clinician.id,
       },
     });
 
@@ -126,8 +157,11 @@ export async function saveConsultationRecord(data: {
   clinicalRationale?: string | null;
 }) {
   try {
-    const user = await prisma.user.findFirst();
-    if (!user) throw new Error("Clinician not found");
+    let clinician = await getClinicianSession();
+    if (!clinician) {
+      clinician = await prisma.user.findFirst();
+    }
+    if (!clinician) throw new Error("Clinician not found");
 
     const patientCase = await prisma.patientCase.findUnique({
       where: { id: data.caseId },
@@ -175,7 +209,7 @@ export async function saveConsultationRecord(data: {
         isOverride: data.isOverride,
         clinicalRationale: data.clinicalRationale ?? null,
         soapNote,
-        clinicianId: user.id,
+        clinicianId: clinician.id,
       },
     });
 

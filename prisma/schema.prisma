@@ -3,14 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id            String         @id @default(cuid())
   name          String
   email         String         @unique
+  image         String?
   role          String         @default("CLINICIAN") // CLINICIAN, ADMIN
   clinicId      String?
   clinic        Clinic?        @relation(fields: [clinicId], references: [id])
