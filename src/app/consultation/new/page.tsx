@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   PHENOTYPES,
   ETIOLOGIES,
@@ -25,9 +27,15 @@ import {
   FileText,
   ChevronRight,
   ShieldCheck,
+  TrendingDown,
+  TrendingUp,
+  Minus,
 } from "lucide-react";
 
-export default function NewConsultationPage() {
+function ConsultationForm() {
+  const searchParams = useSearchParams();
+  const urlCaseId = searchParams.get("caseId");
+
   // Clinician assessment state
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
@@ -64,6 +72,83 @@ export default function NewConsultationPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // Selected case object & longitudinal context
+  const selectedCase = useMemo(() => {
+    return cases.find((c) => c.id === selectedCaseId) || null;
+  }, [cases, selectedCaseId]);
+
+  const latestVisit = useMemo(() => {
+    if (!selectedCase?.consultations || selectedCase.consultations.length === 0) {
+      return null;
+    }
+    return selectedCase.consultations[selectedCase.consultations.length - 1];
+  }, [selectedCase]);
+
+  const visitCount = selectedCase?.consultations?.length || 0;
+
+  // Carry forward logic
+  const applyCaseData = (pCase: any) => {
+    if (!pCase) return;
+
+    const visits = pCase.consultations || [];
+    if (visits.length > 0) {
+      const latest = visits[visits.length - 1];
+
+      // 1. Etiology from latest visit
+      if (latest.selectedEtiology) {
+        setEtiologyId(latest.selectedEtiology);
+      }
+
+      // 2. Phenotype from latest visit
+      if (latest.selectedPhenotype) {
+        setPhenotypeId(latest.selectedPhenotype);
+      }
+
+      // 3. Comorbidities: combine baseline and latest visit
+      let baselineComorbs: string[] = [];
+      try {
+        if (pCase.baselineComorbidities) {
+          baselineComorbs = JSON.parse(pCase.baselineComorbidities);
+        }
+      } catch (e) {}
+
+      let visitComorbs: string[] = [];
+      try {
+        if (latest.selectedComorbidities) {
+          visitComorbs = JSON.parse(latest.selectedComorbidities);
+        }
+      } catch (e) {}
+
+      const combined = Array.from(new Set([...baselineComorbs, ...visitComorbs]));
+      setSelectedComorbidities(combined);
+
+      // 4. Pain score starts at previous visit score
+      if (typeof latest.painScore === "number") {
+        setPainScore(latest.painScore);
+      }
+
+      // 5. Prescribed drug: initialize with previously prescribed drug for titration
+      if (latest.chosenDrugId) {
+        setChosenDrugId(latest.chosenDrugId);
+        if (latest.chosenDose) {
+          setChosenDose(latest.chosenDose);
+        }
+      }
+    } else {
+      // 0 visits: brand new patient case
+      let baselineComorbs: string[] = [];
+      try {
+        if (pCase.baselineComorbidities) {
+          baselineComorbs = JSON.parse(pCase.baselineComorbidities);
+        }
+      } catch (e) {}
+      setSelectedComorbidities(baselineComorbs);
+      setPainScore(7);
+      setPhenotypeId("burning");
+      setEtiologyId("dpn");
+    }
+  };
+
   // Load initial data
   useEffect(() => {
     async function load() {
@@ -73,12 +158,32 @@ export default function NewConsultationPage() {
       ]);
       setFormularyStock(stock);
       setCases(caseList);
-      if (caseList.length > 0) {
-        setSelectedCaseId(caseList[0].id);
+
+      const targetId =
+        urlCaseId && caseList.some((c: any) => c.id === urlCaseId)
+          ? urlCaseId
+          : caseList.length > 0
+          ? caseList[0].id
+          : "";
+
+      if (targetId) {
+        setSelectedCaseId(targetId);
+        const targetCase = caseList.find((c: any) => c.id === targetId);
+        if (targetCase) {
+          applyCaseData(targetCase);
+        }
       }
     }
     load();
-  }, []);
+  }, [urlCaseId]);
+
+  const handleCaseChange = (newCaseId: string) => {
+    setSelectedCaseId(newCaseId);
+    const targetCase = cases.find((c) => c.id === newCaseId);
+    if (targetCase) {
+      applyCaseData(targetCase);
+    }
+  };
 
   // Compute CDSS recommendation
   const cdssResult: CDSSResult = useMemo(() => {
@@ -90,14 +195,16 @@ export default function NewConsultationPage() {
     });
   }, [phenotypeId, etiologyId, selectedComorbidities, formularyStock]);
 
-  // Set default prescription to Top 1
+  // Set default prescription to Top 1 only when not in follow-up mode or no prior drug chosen
   useEffect(() => {
     if (cdssResult.topRecommendations.length > 0) {
-      const top = cdssResult.topRecommendations[0];
-      setChosenDrugId(top.id);
-      setChosenDose(top.startingDose);
+      if (!chosenDrugId) {
+        const top = cdssResult.topRecommendations[0];
+        setChosenDrugId(top.id);
+        setChosenDose(top.startingDose);
+      }
     }
-  }, [cdssResult.topRecommendations]);
+  }, [cdssResult.topRecommendations, chosenDrugId]);
 
   // Toggle comorbidity
   const toggleComorbidity = (id: string) => {
@@ -111,14 +218,28 @@ export default function NewConsultationPage() {
     return checkInteraction(drugA, drugB);
   }, [drugA, drugB]);
 
+  // Real-time pain delta
+  const painDelta = latestVisit ? painScore - latestVisit.painScore : 0;
+
   // Quick rationale chips
-  const rationaleChips = [
-    "เริ่มยาขนาดต่ำตามแนวทาง Start Low, Go Slow",
-    "ปรับลดยาเนื่องจากค่าการทำงานของไต (eGFR)",
-    "เลือกยานี้เพราะได้ประโยชน์เรื่องช่วยนอนหลับร่วมด้วย",
-    "ผู้ป่วยเคยมีประวัติแพ้หรือทนผลข้างเคียงยาตัวอื่นไม่ได้",
-    "เลือกสั่งจ่ายยาที่มีพร้อมในคลังของคลินิก",
-  ];
+  const rationaleChips = useMemo(() => {
+    return [
+      ...(latestVisit
+        ? [
+            "ปรับเพิ่มขนาดยา (Titration) เนื่องจากอาการปวดทุเลาแต่ยังรบกวนชีวิตประจำวัน",
+            "คงขนาดยาเดิม (Maintenance) เนื่องจากควบคุมอาการปวดได้ดีและไม่มีผลข้างเคียง",
+            "เปลี่ยนกลุ่มยาเนื่องจากอาการปวดไม่ตอบสนองต่อยาขนานแรกอย่างเพียงพอ",
+            "ปรับลดยาเนื่องจากคนไข้มีอาการข้างเคียง (ง่วงซึม/เวียนศีรษะ/บวมน้ำ)",
+          ]
+        : [
+            "เริ่มยาขนาดต่ำตามแนวทาง Start Low, Go Slow",
+            "ปรับลดยาเนื่องจากค่าการทำงานของไต (eGFR)",
+            "เลือกยานี้เพราะได้ประโยชน์เรื่องช่วยนอนหลับร่วมด้วย",
+            "ผู้ป่วยเคยมีประวัติแพ้หรือทนผลข้างเคียงยาตัวอื่นไม่ได้",
+          ]),
+      "เลือกสั่งจ่ายยาที่มีพร้อมในคลังของคลินิก",
+    ];
+  }, [latestVisit]);
 
   // Handle create new case
   const handleCreateCase = () => {
@@ -186,8 +307,6 @@ export default function NewConsultationPage() {
     }, 2500);
   };
 
-  const selectedCase = cases.find((c) => c.id === selectedCaseId);
-
   return (
     <div className="space-y-6 pb-12">
       {/* Toast Notification */}
@@ -241,7 +360,7 @@ export default function NewConsultationPage() {
         <div className="flex items-center gap-2">
           <select
             value={selectedCaseId}
-            onChange={(e) => setSelectedCaseId(e.target.value)}
+            onChange={(e) => handleCaseChange(e.target.value)}
             className="bg-slate-50 border border-slate-200 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-slate-400 focus:bg-white transition"
           >
             <option value="">-- สลับแฟ้มเคส --</option>
@@ -267,6 +386,55 @@ export default function NewConsultationPage() {
           </button>
         </div>
       </div>
+
+      {/* Previous Visit Summary Banner (Longitudinal Context) */}
+      {latestVisit && (
+        <div className="bg-sky-50/80 border border-sky-200/90 rounded-xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex items-start md:items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-xs font-mono font-bold text-xs">
+              #{visitCount}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 font-semibold text-slate-900">
+                <span>
+                  ประวัติการตรวจล่าสุด ({new Date(latestVisit.visitDate).toLocaleDateString("th-TH", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })})
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white text-sky-800 border border-sky-200 font-bold">
+                  Follow-up Mode
+                </span>
+              </div>
+              <div className="text-slate-600 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>
+                  ยาเดิม: <strong className="text-slate-900 capitalize">{latestVisit.chosenDrugId}</strong> ({latestVisit.chosenDose})
+                </span>
+                <span>&bull;</span>
+                <span>
+                  ความปวดเดิม: <strong className="text-slate-900 font-mono">NRS {latestVisit.painScore}/10</strong>
+                </span>
+                <span>&bull;</span>
+                <span>
+                  อาการเดิม: {PHENOTYPES.find((p) => p.id === latestVisit.selectedPhenotype)?.th || latestVisit.selectedPhenotype}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href={`/cases/${selectedCase?.id}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-sky-100 text-sky-900 border border-sky-300 font-semibold transition text-xs shadow-xs"
+            >
+              <span>ดูไทม์ไลน์ทั้งหมด</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Unified Clinical Workbench Surface (Q1) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -310,6 +478,41 @@ export default function NewConsultationPage() {
               <span>8</span>
               <span>10 (ปวดมากที่สุด)</span>
             </div>
+
+            {/* Real-time Pain Score Delta Indicator */}
+            {latestVisit && (
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
+                <div className="text-slate-500 flex items-center gap-1.5">
+                  <span>ความปวดครั้งก่อนหน้า:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    NRS {latestVisit.painScore}/10
+                  </span>
+                </div>
+
+                <div>
+                  {painDelta < 0 ? (
+                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 font-mono text-[11px]">
+                      <TrendingDown className="h-3.5 w-3.5" />
+                      ลดลง {Math.abs(painDelta)} คะแนน (ทุเลาลง{" "}
+                      {Math.round(
+                        (Math.abs(painDelta) / (latestVisit.painScore || 1)) * 100
+                      )}
+                      %)
+                    </span>
+                  ) : painDelta > 0 ? (
+                    <span className="inline-flex items-center gap-1 font-semibold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded border border-rose-200 font-mono text-[11px]">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      เพิ่มขึ้น +{painDelta} คะแนน (ปวดมากขึ้น)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200 font-mono text-[11px]">
+                      <Minus className="h-3.5 w-3.5" />
+                      ระดับความปวดคงเดิม
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 2: Underlying Etiology (Guideline First-line Driver) */}
@@ -1002,5 +1205,19 @@ export default function NewConsultationPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewConsultationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">
+          กำลังโหลดข้อมูลการประเมิน...
+        </div>
+      }
+    >
+      <ConsultationForm />
+    </Suspense>
   );
 }

@@ -62,6 +62,10 @@ _Avoid_: Pain level, pain meter
 The chronological sequence of consultations for a Patient Case demonstrating treatment response, pain score trajectory, and dose titration over time.
 _Avoid_: History log, progress track
 
+**Follow-up Consultation**:
+A subsequent clinical encounter for an existing Patient Case where previous etiology, comorbidities, and pain phenotype are carried forward to evaluate treatment response, titration adequacy, and ongoing drug safety against prior consultations.
+_Avoid_: Re-check, repeat visit, follow-up appointment
+
 **SOAP Note**:
 A structured clinical summary formatted into Subjective, Objective, Assessment, and Plan sections ready for direct transfer into hospital information systems.
 _Avoid_: Summary text, report, discharge note

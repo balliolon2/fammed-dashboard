@@ -15,12 +15,35 @@ export interface SoapInput {
   chosenDose: string;
   clinicalRationale?: string | null;
   topRankedDrugs: RankedDrug[];
+  visitNumber?: number;
+  previousPainScore?: number | null;
+  previousDrugId?: string | null;
+  previousDose?: string | null;
 }
 
 export function generateSoapNote(input: SoapInput): string {
   const phenotype = PHENOTYPES.find((p) => p.id === input.phenotypeId);
   const etiology = ETIOLOGIES.find((e) => e.id === input.etiologyId);
   const chosenDrug = DRUGS.find((d) => d.id === input.chosenDrugId);
+
+  const isFollowUp = (input.visitNumber ?? 1) > 1;
+  const previousDrug = input.previousDrugId
+    ? DRUGS.find((d) => d.id === input.previousDrugId)?.name || input.previousDrugId
+    : null;
+
+  const delta =
+    input.previousPainScore !== undefined && input.previousPainScore !== null
+      ? input.painScore - input.previousPainScore
+      : null;
+
+  const deltaText =
+    delta !== null
+      ? delta < 0
+        ? `(ลดลง ${Math.abs(delta)} คะแนน, ทุเลาลง)`
+        : delta > 0
+        ? `(เพิ่มขึ้น +${delta} คะแนน)`
+        : "(คงที่เท่าเดิม)"
+      : "";
 
   const comorbidityLabels = input.comorbidityIds
     .map((id) => COMORBIDITIES.find((c) => c.id === id)?.th)
@@ -39,12 +62,13 @@ export function generateSoapNote(input: SoapInput): string {
   });
 
   return `[PROGRESS NOTE - NEUROPATHIC PAIN CLINICAL EVALUATION]
-Date: ${dateStr} | Ref: ${input.caseCode}
+Date: ${dateStr} | Ref: ${input.caseCode} | ${isFollowUp ? `Visit #${input.visitNumber} (Follow-up)` : "Initial Visit"}
 
 S (Subjective):
 - ผู้ป่วยเพศ ${input.sex === "MALE" ? "ชาย" : input.sex === "FEMALE" ? "หญิง" : "ทั่วไป"} ช่วงอายุ ${input.ageGroup} ปี
-- อาการสำคัญ: ปวดระบบประสาท ลักษณะ ${phenotype?.th || input.phenotypeId} (${phenotype?.en || ""})
-- ระดับความปวดปัจจุบัน (Pain Score): NRS ${input.painScore}/10
+- ประเภทการตรวจ: ${isFollowUp ? `ติดตามผลการรักษา (Follow-up Consultation ครั้งที่ ${input.visitNumber})` : "ประเมินตั้งต้น (Initial Consultation)"}
+${isFollowUp && previousDrug ? `- การรักษาเดิม: ได้รับยา ${previousDrug} ${input.previousDose || ""}, ความปวดเดิม NRS ${input.previousPainScore}/10\n` : ""}- อาการสำคัญ: ปวดระบบประสาท ลักษณะ ${phenotype?.th || input.phenotypeId} (${phenotype?.en || ""})
+- ระดับความปวดปัจจุบัน (Pain Score): NRS ${input.painScore}/10 ${deltaText}
 - โรคหรือภาวะที่เป็นสาเหตุ (Etiology): ${etiology?.th || input.etiologyId} (${etiology?.en || ""})
 - โรคร่วมและประวัติสำคัญ: ${comorbidityLabels || "ไม่มีโรคร่วมที่มีข้อห้ามใช้ชัดเจน"}
 
@@ -55,7 +79,7 @@ O (Objective):
 
 A (Assessment):
 - Diagnosis: Neuropathic Pain secondary to ${etiology?.th || input.etiologyId} (${phenotype?.th || input.phenotypeId} phenotype)
-- CDSS TASP 2020 Guidance: Top First-line recommended agents = ${topDrugsText}
+${isFollowUp && delta !== null ? `- Treatment Response: ${delta < 0 ? `อาการปวดตอบสนองต่อการรักษา (Pain score ลดลงจาก NRS ${input.previousPainScore} เหลือ ${input.painScore})` : delta > 0 ? `อาการปวดเพิ่มขึ้นจากครั้งก่อน (NRS ${input.previousPainScore} -> ${input.painScore}) พิจารณาปรับเพิ่มยาหรือเปลี่ยนกลุ่มยา` : "อาการปวดทรงตัวเมื่อเทียบกับครั้งก่อน"}\n` : ""}- CDSS TASP 2020 Guidance: Top First-line recommended agents = ${topDrugsText}
 ${input.comorbidityIds.includes("cardiac") ? "- Safety Alert: TCA (Amitriptyline) Contraindicated due to cardiac arrhythmia risk\n" : ""}${input.comorbidityIds.includes("renal") ? "- Safety Alert: Dose adjustment required for Gabapentinoids due to renal impairment\n" : ""}
 P (Plan):
 - Pharmacotherapy: Prescribed ${chosenDrug?.name || input.chosenDrugId} ${input.chosenDose}

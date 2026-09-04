@@ -182,6 +182,17 @@ export async function saveConsultationRecord(data: {
       formularyStock,
     });
 
+    // Fetch previous consultations to determine visitNumber and longitudinal context
+    const previousConsultations = await prisma.consultation.findMany({
+      where: { caseId: data.caseId },
+      orderBy: { visitDate: "asc" },
+    });
+    const visitNumber = previousConsultations.length + 1;
+    const lastVisit =
+      previousConsultations.length > 0
+        ? previousConsultations[previousConsultations.length - 1]
+        : null;
+
     // Generate SOAP note
     const soapInput: SoapInput = {
       caseCode: patientCase.caseCode,
@@ -197,6 +208,10 @@ export async function saveConsultationRecord(data: {
       chosenDose: data.chosenDose,
       clinicalRationale: data.clinicalRationale,
       topRankedDrugs: cdssResult.topRecommendations,
+      visitNumber,
+      previousPainScore: lastVisit?.painScore ?? null,
+      previousDrugId: lastVisit?.chosenDrugId ?? null,
+      previousDose: lastVisit?.chosenDose ?? null,
     };
 
     const soapNote = generateSoapNote(soapInput);
