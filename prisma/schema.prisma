@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  role          String         @default("CLINICIAN") // CLINICIAN, ADMIN
+  clinicId      String?
+  clinic        Clinic?        @relation(fields: [clinicId], references: [id])
+  consultations Consultation[]
+  patientCases  PatientCase[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Clinic {
+  id           String            @id @default(cuid())
+  name         String
+  code         String            @unique
+  type         String            @default("PRIMARY_CARE") // PRIMARY_CARE, COMMUNITY_HOSPITAL, GENERAL_HOSPITAL
+  users        User[]
+  patientCases PatientCase[]
+  formularies  ClinicFormulary[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model ClinicFormulary {
+  id                 String   @id @default(cuid())
+  clinicId           String
+  clinic             Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  drugId             String   // e.g. amitriptyline, gabapentin, etc.
+  isInStock          Boolean  @default(true)
+  customStartingDose String?
+  notes              String?
+  updatedAt          DateTime @updatedAt
+
+  @@unique([clinicId, drugId])
+}
+
+model PatientCase {
+  id                    String         @id @default(cuid())
+  caseCode              String         @unique // e.g. CASE-2026-001
+  ageGroup              String         // "<45", "45-65", ">65"
+  sex                   String         // "MALE", "FEMALE", "OTHER"
+  baselineEgfr          Float?         // e.g. 45.0 (mL/min/1.73m2)
+  baselineLft           String?        // "NORMAL", "MILD_ELEVATED", "CHRONIC_LIVER_DISEASE"
+  baselineComorbidities String         // JSON array of comorbidity IDs: e.g. '["cardiac", "ht"]'
+  clinicId              String
+  clinic                Clinic         @relation(fields: [clinicId], references: [id])
+  createdByUserId       String
+  createdByUser         User           @relation(fields: [createdByUserId], references: [id])
+  consultations         Consultation[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model Consultation {
+  id                    String      @id @default(cuid())
+  caseId                String
+  patientCase           PatientCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  visitDate             DateTime    @default(now())
+  painScore             Int         // NRS/VAS 0-10
+  selectedPhenotype     String      // burning, lancinating, allodynia, paresthesia, mixed
+  selectedEtiology      String      // dpn, phn, tgn, central, phantom, fibro, myofascial
+  selectedComorbidities String      // JSON array of comorbidity IDs
+  calculatedScoreJson   String      // Full JSON snapshot of CDSS calculation
+  chosenDrugId          String      // e.g. amitriptyline
+  chosenDose            String      // e.g. "10 mg HS"
+  isOverride            Boolean     @default(false)
+  clinicalRationale     String?     // Why clinician diverged from Top 1-2 or picked caution drug
+  soapNote              String      // Generated SOAP progress note
+  clinicianId           String
+  clinician             User        @relation(fields: [clinicianId], references: [id])
+  createdAt             DateTime    @default(now())
+}
