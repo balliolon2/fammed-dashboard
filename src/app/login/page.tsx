@@ -96,7 +96,7 @@ export default function LoginPage() {
             <>
               <div className="relative flex items-center justify-center">
                 <div className="border-t border-slate-200 w-full"></div>
-                <span className="bg-white px-3 text-[11px] text-slate-400 font-medium absolute">หรือเลือกแพทย์ในคลินิก</span>
+                <span className="bg-white px-3 text-[11px] text-slate-400 font-medium absolute">หรือทดสอบด้วยแพทย์จำลอง</span>
               </div>
 
               {/* Quick Clinician Switcher */}
@@ -104,15 +104,15 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <UserCheck className="h-3.5 w-3.5 text-slate-700" />
-                    <span>เข้าสู่ระบบด่วน (Quick Clinician Access)</span>
+                    <span>เข้าสู่ระบบด่วนเฉพาะแพทย์ตัวอย่าง (Demo OPD)</span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-                    OPD Mode
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold border border-amber-200">
+                    Demo Mode
                   </span>
                 </div>
 
                 <p className="text-[11px] text-slate-500">
-                  คลิกเลือกโปรไฟล์แพทย์เพื่อเข้าปฏิบัติหน้าที่และบันทึกประวัติการตรวจ
+                  เลือกโปรไฟล์แพทย์จำลองเพื่อทดสอบระบบ (แพทย์จริงต้องเข้าสู่ระบบด้วย Google Workspace เท่านั้น)
                 </p>
 
                 <div className="space-y-2">

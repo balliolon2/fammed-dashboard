@@ -13,6 +13,11 @@ export async function getCurrentClinician() {
 export async function getAllClinicians() {
   try {
     const users = await prisma.user.findMany({
+      where: {
+        email: {
+          endsWith: "@fammed.local",
+        },
+      },
       select: {
         id: true,
         name: true,

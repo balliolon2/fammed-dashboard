@@ -20,41 +20,47 @@ export const authOptions: NextAuthOptions = {
           }),
         ]
       : []),
-    CredentialsProvider({
-      id: "clinician-credentials",
-      name: "OPD Clinician Switcher",
-      credentials: {
-        clinicianId: { label: "Clinician ID", type: "text" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.clinicianId) {
-          return null;
-        }
+    ...(process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN !== "false"
+      ? [
+          CredentialsProvider({
+            id: "clinician-credentials",
+            name: "OPD Clinician Switcher",
+            credentials: {
+              clinicianId: { label: "Clinician ID", type: "text" },
+            },
+            async authorize(credentials) {
+              if (!credentials?.clinicianId) {
+                return null;
+              }
 
-        try {
-          const clinician = await prisma.user.findUnique({
-            where: { id: credentials.clinicianId },
-            include: { clinic: true },
-          });
+              try {
+                const clinician = await prisma.user.findUnique({
+                  where: { id: credentials.clinicianId },
+                  include: { clinic: true },
+                });
 
-          if (!clinician) {
-            return null;
-          }
+                // SECURITY: Only mock clinicians (@fammed.local) can use passwordless quick login!
+                // Real Google accounts must authenticate via Google OAuth.
+                if (!clinician || !clinician.email.endsWith("@fammed.local")) {
+                  return null;
+                }
 
-          return {
-            id: clinician.id,
-            name: clinician.name,
-            email: clinician.email,
-            image: clinician.image,
-            role: clinician.role,
-            clinicId: clinician.clinicId,
-          };
-        } catch (error) {
-          console.error("Error authorizing clinician credentials:", error);
-          return null;
-        }
-      },
-    }),
+                return {
+                  id: clinician.id,
+                  name: clinician.name,
+                  email: clinician.email,
+                  image: clinician.image,
+                  role: clinician.role,
+                  clinicId: clinician.clinicId,
+                };
+              } catch (error) {
+                console.error("Error authorizing clinician credentials:", error);
+                return null;
+              }
+            },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     async signIn({ user, account }) {
