@@ -1,0 +1,5 @@
+# 0009: Persistent Left Sidebar and Responsive App Shell Architecture
+
+To resolve navigation discoverability, touch target limitations, and mobile horizontal scrolling friction across clinician workflows, the system transitions from a horizontal top navbar into a persistent Left Sidebar and responsive App Shell architecture.
+
+The App Shell provides an asymmetric desktop layout (fixed left navigation column paired with a dedicated utility bar) that anchors primary clinical routes (Dashboard, New CDSS Consultation, Patient Cases Registry, and Clinic Formulary) alongside attending clinician profile controls. For mobile touch environments, the shell replaces horizontal overflow tabs with a fixed 4-target Bottom Navigation Bar and an off-canvas drawer, enabling one-thumb navigation while maintaining strict visual cohesion with the TASP 2020 clinical design system.

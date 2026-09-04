@@ -137,7 +137,7 @@ export function DashboardWorklist({ cases, formularyStock }: DashboardWorklistPr
         <div className="flex items-center gap-2.5 shrink-0">
           <Link
             href="/consultation/new"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.99]"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs shadow-emerald-700/20 transition-all active:scale-[0.99]"
           >
             <Stethoscope className="h-4 w-4" /> เริ่มประเมินเคสใหม่
           </Link>
@@ -151,87 +151,211 @@ export function DashboardWorklist({ cases, formularyStock }: DashboardWorklistPr
         </div>
       </div>
 
-      {/* Triage Tabs & Search Bar Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 rounded-xl border border-slate-200/80 shadow-xs">
-        {/* Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto p-0.5">
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${
-              activeTab === "all"
-                ? "bg-slate-900 text-white font-semibold shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium"
-            }`}
-          >
-            <span>ทั้งหมด</span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-              activeTab === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-            }`}>
+      {/* Donezo-Inspired 4 Clinical Summary Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* Card 1: Total Cases */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("all")}
+          className={`p-4 sm:p-5 rounded-2xl text-left transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+            activeTab === "all"
+              ? "bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 text-white shadow-lg shadow-emerald-950/25 ring-2 ring-emerald-500"
+              : "bg-white hover:border-emerald-300 hover:shadow-xs border border-slate-200/80 text-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span
+              className={`text-xs font-bold tracking-tight ${
+                activeTab === "all" ? "text-emerald-300" : "text-slate-500"
+              }`}
+            >
+              เคสทั้งหมดในความดูแล
+            </span>
+            <div
+              className={`h-7 w-7 rounded-lg flex items-center justify-center ${
+                activeTab === "all" ? "bg-white/10 text-white" : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              <Activity className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight">
               {counts.all}
-            </span>
-          </button>
+            </div>
+            <p
+              className={`text-[11px] mt-1 truncate ${
+                activeTab === "all" ? "text-emerald-200/80" : "text-slate-400"
+              }`}
+            >
+              Active Queue &bull; ติดตามผลต่อเนื่อง
+            </p>
+          </div>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("severe")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${
-              activeTab === "severe"
-                ? "bg-rose-900 text-white font-semibold shadow-xs"
-                : "text-slate-600 hover:text-rose-900 hover:bg-rose-50/50 font-medium"
-            }`}
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-            <span>ปวดรุนแรง (NRS ≥ 7)</span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-              activeTab === "severe" ? "bg-white/20 text-white" : "bg-rose-100/70 text-rose-700"
-            }`}>
+        {/* Card 2: Severe Pain Cases */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("severe")}
+          className={`p-4 sm:p-5 rounded-2xl text-left transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+            activeTab === "severe"
+              ? "bg-gradient-to-br from-rose-950 via-rose-900 to-rose-800 text-white shadow-lg shadow-rose-950/25 ring-2 ring-rose-500"
+              : "bg-white hover:border-rose-300 hover:shadow-xs border border-slate-200/80 text-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span
+              className={`text-xs font-bold tracking-tight ${
+                activeTab === "severe" ? "text-rose-300" : "text-slate-500"
+              }`}
+            >
+              ปวดรุนแรง (Severe)
+            </span>
+            <div
+              className={`h-7 w-7 rounded-lg flex items-center justify-center ${
+                activeTab === "severe" ? "bg-white/10 text-white" : "bg-rose-50 text-rose-700"
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div
+              className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${
+                activeTab === "severe" ? "text-white" : "text-rose-700"
+              }`}
+            >
               {counts.severe}
-            </span>
-          </button>
+            </div>
+            <p
+              className={`text-[11px] mt-1 truncate ${
+                activeTab === "severe" ? "text-rose-200/80" : "text-slate-400"
+              }`}
+            >
+              NRS ≥ 7 &bull; ต้องการดูแลเร่งด่วน
+            </p>
+          </div>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("titration")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${
-              activeTab === "titration"
-                ? "bg-amber-900 text-white font-semibold shadow-xs"
-                : "text-slate-600 hover:text-amber-900 hover:bg-amber-50/50 font-medium"
-            }`}
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-            <span>ต้องปรับยา (NRS ≥ 4)</span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-              activeTab === "titration" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-800"
-            }`}>
+        {/* Card 3: Titration Due */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("titration")}
+          className={`p-4 sm:p-5 rounded-2xl text-left transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+            activeTab === "titration"
+              ? "bg-gradient-to-br from-amber-950 via-amber-900 to-amber-800 text-white shadow-lg shadow-amber-950/25 ring-2 ring-amber-500"
+              : "bg-white hover:border-amber-300 hover:shadow-xs border border-slate-200/80 text-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span
+              className={`text-xs font-bold tracking-tight ${
+                activeTab === "titration" ? "text-amber-300" : "text-slate-500"
+              }`}
+            >
+              ต้องปรับขนาดยา
+            </span>
+            <div
+              className={`h-7 w-7 rounded-lg flex items-center justify-center ${
+                activeTab === "titration" ? "bg-white/10 text-white" : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              <TrendingUp className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div
+              className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${
+                activeTab === "titration" ? "text-white" : "text-amber-700"
+              }`}
+            >
               {counts.titration}
-            </span>
-          </button>
+            </div>
+            <p
+              className={`text-[11px] mt-1 truncate ${
+                activeTab === "titration" ? "text-amber-200/80" : "text-slate-400"
+              }`}
+            >
+              NRS ≥ 4 &bull; ควรพิจารณาไตเตรทยารักษา
+            </p>
+          </div>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("improving")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${
-              activeTab === "improving"
-                ? "bg-emerald-900 text-white font-semibold shadow-xs"
-                : "text-slate-600 hover:text-emerald-900 hover:bg-emerald-50/50 font-medium"
-            }`}
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            <span>ตอบสนองดี (ปวดลดลง)</span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-              activeTab === "improving" ? "bg-white/20 text-white" : "bg-emerald-100/70 text-emerald-800"
-            }`}>
-              {counts.improving}
+        {/* Card 4: Improving */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("improving")}
+          className={`p-4 sm:p-5 rounded-2xl text-left transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+            activeTab === "improving"
+              ? "bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-800 text-white shadow-lg shadow-emerald-950/25 ring-2 ring-emerald-400"
+              : "bg-white hover:border-emerald-300 hover:shadow-xs border border-slate-200/80 text-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between w-full">
+            <span
+              className={`text-xs font-bold tracking-tight ${
+                activeTab === "improving" ? "text-emerald-200" : "text-slate-500"
+              }`}
+            >
+              ตอบสนองดี (Improved)
             </span>
-          </button>
+            <div
+              className={`h-7 w-7 rounded-lg flex items-center justify-center ${
+                activeTab === "improving" ? "bg-white/10 text-white" : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              <TrendingDown className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div
+              className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${
+                activeTab === "improving" ? "text-white" : "text-emerald-700"
+              }`}
+            >
+              {counts.improving}
+            </div>
+            <p
+              className={`text-[11px] mt-1 truncate ${
+                activeTab === "improving" ? "text-emerald-200/80" : "text-slate-400"
+              }`}
+            >
+              ระดับคะแนนความปวดลดลง
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {/* Filter Status Strip & Search Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 font-medium">มุมมองปัจจุบัน:</span>
+          <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">
+            {activeTab === "all" && "เคสทั้งหมด"}
+            {activeTab === "severe" && "ปวดรุนแรง (NRS ≥ 7)"}
+            {activeTab === "titration" && "ต้องปรับยา (NRS ≥ 4)"}
+            {activeTab === "improving" && "ตอบสนองดี (ปวดลดลง)"}
+          </span>
+          <span className="text-slate-400 text-[11px]">({filteredCases.length} เคส)</span>
+          {activeTab !== "all" && (
+            <button
+              onClick={() => setActiveTab("all")}
+              className="text-xs text-emerald-700 hover:underline font-semibold ml-1 cursor-pointer"
+            >
+              ดูทั้งหมด
+            </button>
+          )}
         </div>
 
         {/* Search Box */}
-        <div className="relative sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+        <div className="relative sm:w-72">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input
             type="text"
-            placeholder="ค้นหารหัสเคส, ชื่อยา, อาการ..."
+            placeholder="ค้นหารหัสเคส, ชื่อยา, อาการปวด..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-slate-400 transition"
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200/90 text-xs bg-slate-50/60 focus:bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
           />
         </div>
       </div>
